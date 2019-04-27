@@ -6,7 +6,9 @@
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/inrupt/websockets-pubsub.svg)](https://greenkeeper.io/)
 
-A central component for Solid servers, handles Web Access Control and Linked Data Platform concerns.
+A WebSockets pubsub component for Solid servers, sends change notifications to subscribed WebSocket clients.
+
+See https://github.com/solid/solid-spec/blob/master/api-websockets.md for the relevant section of the Solid spec.
 
 Published under an MIT license by inrupt, Inc.
 
