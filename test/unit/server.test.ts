@@ -1,6 +1,8 @@
-import * as http from 'http'
-import { closeServer } from '../../src/server'
+import { Server } from '../../src/server'
+let server: Server
 
 test('server', () => {
-  closeServer()
+  server = new Server(8080, `http://localhost:${8080}`)
+  server.listen()
+  server.close()
 })

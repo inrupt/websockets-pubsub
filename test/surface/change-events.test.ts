@@ -1,14 +1,12 @@
-import { Server } from '../../src/server'
+import { startServer, stopServer } from './helper'
 import fetch from 'node-fetch'
 import WebSocket from 'ws'
 
 let wsClient: WebSocket
-let server: Server
 let received: Promise<string>
 
 beforeEach(async () => {
-  server = new Server(8080, 'http://localhost:8080')
-  server.listen()
+  startServer(8080)
   wsClient = new WebSocket('ws://localhost:8080')
   received = new Promise((resolve) => {
     wsClient.on('message', function incoming (data) {
@@ -24,7 +22,7 @@ beforeEach(async () => {
 })
 afterEach(() => {
   wsClient.close()
-  server.close()
+  stopServer()
 })
 
 test('publishes a change event', async () => {
