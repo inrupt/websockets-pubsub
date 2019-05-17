@@ -15,7 +15,7 @@ export class Server {
   constructor (port: number, aud: string) {
     this.port = port
     this.storage = new BlobTreeInMem() // singleton in-memory storage
-    const handler = makeHandler(this.storage, aud)
+    const handler = makeHandler(this.storage, aud, false)
     this.server = http.createServer(handler)
     this.wsServer = new WebSocket.Server({
       server: this.server
