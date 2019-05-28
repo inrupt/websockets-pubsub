@@ -1,12 +1,15 @@
 {
   "name": "websockets-pubsub",
-  "version": "0.1.0",
-  "description": "WebSocket pubsub for Solid servers, see https://github.com/solid/solid-spec/blob/master/api-websockets.md",
-  "main": "dist/app.js",
+  "version": "0.1.2",
+  "description": "WebSocket pubsub for Solid pod servers, see https://github.com/solid/solid-spec/blob/master/api-websockets.md",
+  "main": "dist/lib/hub.js",
   "dependencies": {
     "@types/debug": "^4.1.4",
     "@types/node": "^11.12.1",
-    "debug": "^4.1.1"
+    "@types/ws": "^6.0.1",
+    "debug": "^4.1.1",
+    "wac-ldp": "^0.2.1",
+    "ws": "^6.2.1"
   },
   "devDependencies": {
     "@types/jest": "^24.0.11",
