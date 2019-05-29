@@ -5,6 +5,7 @@ import { checkAccess, AccessCheckTask, Path, TaskType, BlobTree, determineWebId 
 const debug = Debug('server')
 
 const BEARER_PREFIX = 'Bearer '
+const BEARER_PARAM_NAME = 'bearerToken'
 const SUBSCRIBE_COMMAND_PREFIX = 'sub '
 
 interface Client {
@@ -21,7 +22,7 @@ function getOrigin (headers: http.IncomingHttpHeaders): string | undefined {
   return headers.origin
 }
 
-function getWebId (headers: http.IncomingHttpHeaders, aud: string): Promise<string | undefined> {
+function getWebIdFromAuthorizationHeader (headers: http.IncomingHttpHeaders, aud: string): Promise<string | undefined> {
   let header
   if (Array.isArray(headers.authorization)) {
     header = headers.authorization[0]
@@ -37,6 +38,23 @@ function getWebId (headers: http.IncomingHttpHeaders, aud: string): Promise<stri
   return determineWebId(header.substring(BEARER_PREFIX.length), aud)
 }
 
+function getWebIdFromQueryParameter (url: URL, aud: string): Promise<string | undefined> {
+  const bearerToken = url.searchParams.get(BEARER_PARAM_NAME)
+  if (typeof bearerToken !== 'string') {
+    return Promise.resolve(undefined)
+  }
+  return determineWebId(bearerToken, aud)
+}
+
+async function getWebId (httpReq: http.IncomingMessage, audience: string) {
+  const fromAuthorizationHeader = await getWebIdFromAuthorizationHeader(httpReq.headers, audience)
+  if (fromAuthorizationHeader) {
+    return fromAuthorizationHeader
+  }
+  if (httpReq.url) {
+    return getWebIdFromQueryParameter(new URL(httpReq.url, audience), audience)
+  }
+}
 function hasPrefix (longString: string, shortString: string) {
   const length = shortString.length
   if (longString.length < length) {
@@ -66,7 +84,7 @@ export class Hub {
   async handleConnection (ws: any, upgradeRequest: http.IncomingMessage): Promise<void> {
     const newClient = {
       webSocket: ws,
-      webId: await getWebId(upgradeRequest.headers, this.aud),
+      webId: await getWebId(upgradeRequest, this.aud),
       origin: getOrigin(upgradeRequest.headers),
       subscriptions: []
     } as Client
