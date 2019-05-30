@@ -1,6 +1,6 @@
 import * as http from 'http'
 import Debug from 'debug'
-import { BlobTreeInMem, BlobTree, makeHandler, Path } from 'wac-ldp'
+import { BlobTreeInMem, BlobTree, WacLdp } from 'wac-ldp'
 import * as WebSocket from 'ws'
 import { Hub } from './lib/hub'
 
@@ -8,6 +8,7 @@ const debug = Debug('server')
 
 export class Server {
   storage: BlobTree
+  wacLdp: WacLdp
   server: http.Server
   hub: Hub
   port: number
@@ -15,18 +16,15 @@ export class Server {
   constructor (port: number, aud: string) {
     this.port = port
     this.storage = new BlobTreeInMem() // singleton in-memory storage
-    const handler = makeHandler(this.storage, aud, false)
-    this.server = http.createServer(handler)
+    this.wacLdp = new WacLdp(this.storage, aud, new URL(`wss://localhost:${this.port}/`), false)
+    this.server = http.createServer(this.wacLdp.handler.bind(this.wacLdp))
     this.wsServer = new WebSocket.Server({
       server: this.server
     })
-    this.hub = new Hub(aud)
+    this.hub = new Hub(this.wacLdp, aud)
     this.wsServer.on('connection', this.hub.handleConnection.bind(this.hub))
-    this.storage.on('change', (event: { path: Path }) => {
-      this.hub.publishChange(event.path, this.storage)
-    })
-    this.storage.on('delete', (event: { path: Path }) => {
-      this.hub.publishChange(event.path, this.storage)
+    this.wacLdp.on('change', (event: { url: URL }) => {
+      this.hub.publishChange(event.url)
     })
   }
   listen () {
