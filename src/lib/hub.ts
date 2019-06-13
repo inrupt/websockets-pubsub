@@ -9,9 +9,9 @@ const BEARER_PARAM_NAME = 'bearer_token'
 const SUBSCRIBE_COMMAND_PREFIX = 'sub '
 
 interface Client {
-  webSocket: any,
-  webId: URL,
-  origin: string,
+  webSocket: any
+  webId: URL
+  origin: string
   subscriptions: Array<URL>
 }
 
