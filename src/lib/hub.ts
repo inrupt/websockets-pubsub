@@ -1,11 +1,10 @@
 import * as http from 'http'
 import Debug from 'debug'
-import { WacLdp, determineWebId, ACL } from 'wac-ldp'
+import { WacLdp, determineWebId, ACL, BEARER_PARAM_NAME } from 'wac-ldp'
 
 const debug = Debug('server')
 
 const BEARER_PREFIX = 'Bearer '
-const BEARER_PARAM_NAME = 'bearer_token'
 const SUBSCRIBE_COMMAND_PREFIX = 'sub '
 
 interface Client {
@@ -73,25 +72,34 @@ export class Hub {
 
   getWebIdFromQueryParameter (url: URL): Promise<URL | undefined> {
     const bearerToken = url.searchParams.get(BEARER_PARAM_NAME)
+
     if (typeof bearerToken !== 'string') {
       return Promise.resolve(undefined)
     }
+    debug('determining WebId from query parameter', bearerToken, this.audience)
     return determineWebId(bearerToken, this.audience)
   }
 
   async getWebId (httpReq: http.IncomingMessage): Promise<URL | undefined> {
+    debug('getting WebId from upgrade request')
     const fromAuthorizationHeader = await this.getWebIdFromAuthorizationHeader(httpReq.headers)
     if (fromAuthorizationHeader) {
+      debug('from authorization header')
       return fromAuthorizationHeader
     }
     if (httpReq.url) {
+      debug('looking at url', httpReq.url, this.audience, new URL(httpReq.url, this.audience))
       return this.getWebIdFromQueryParameter(new URL(httpReq.url, this.audience))
     }
   }
 
   publishChange (url: URL) {
+    debug('publishChange', url)
     this.clients.map(async (client) => {
+      debug('publishChange client', url, client.subscriptions)
       client.subscriptions.map(subscription => {
+        debug('hasPrefix', url.toString(), subscription.toString(), hasPrefix(url.toString(), subscription.toString()))
+        debug('hasAccess', client.webId, client.origin, url, ACL.Read, this.wacLdp.hasAccess(client.webId, client.origin, url, ACL.Read))
         if (hasPrefix(url.toString(), subscription.toString()) && this.wacLdp.hasAccess(client.webId, client.origin, url, ACL.Read)) {
           client.webSocket.send(`pub ${url.toString()}`)
         }

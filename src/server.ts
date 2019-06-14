@@ -13,10 +13,10 @@ export class Server {
   hub: Hub
   port: number
   wsServer: any
-  constructor (port: number, aud: string) {
+  constructor (port: number, aud: string, skipWac: boolean) {
     this.port = port
     this.storage = new BlobTreeInMem() // singleton in-memory storage
-    this.wacLdp = new WacLdp(this.storage, aud, new URL(`wss://localhost:${this.port}/`), false)
+    this.wacLdp = new WacLdp(this.storage, aud, new URL(`ws://localhost:${this.port}/`), skipWac)
     this.server = http.createServer(this.wacLdp.handler.bind(this.wacLdp))
     this.wsServer = new WebSocket.Server({
       server: this.server
@@ -24,6 +24,7 @@ export class Server {
     this.hub = new Hub(this.wacLdp, aud)
     this.wsServer.on('connection', this.hub.handleConnection.bind(this.hub))
     this.wacLdp.on('change', (event: { url: URL }) => {
+      debug('change event from this.wacLdp!', event.url)
       this.hub.publishChange(event.url)
     })
   }
