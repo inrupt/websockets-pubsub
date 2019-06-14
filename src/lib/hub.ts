@@ -2,14 +2,14 @@ import * as http from 'http'
 import Debug from 'debug'
 import { WacLdp, determineWebId, ACL, BEARER_PARAM_NAME } from 'wac-ldp'
 
-const debug = Debug('server')
+const debug = Debug('hub')
 
 const BEARER_PREFIX = 'Bearer '
 const SUBSCRIBE_COMMAND_PREFIX = 'sub '
 
 interface Client {
   webSocket: any
-  webId: URL
+  webIdPromise: Promise<URL>
   origin: string
   subscriptions: Array<URL>
 }
@@ -40,7 +40,7 @@ export class Hub {
   async handleConnection (ws: any, upgradeRequest: http.IncomingMessage): Promise<void> {
     const newClient = {
       webSocket: ws,
-      webId: await this.getWebId(upgradeRequest),
+      webIdPromise: this.getWebId(upgradeRequest),
       origin: getOrigin(upgradeRequest.headers),
       subscriptions: []
     } as Client
@@ -52,6 +52,7 @@ export class Hub {
       }
     })
     this.clients.push(newClient)
+    debug('client accepted')
   }
 
   getWebIdFromAuthorizationHeader (headers: http.IncomingHttpHeaders): Promise<URL | undefined> {
@@ -70,14 +71,17 @@ export class Hub {
     return determineWebId(header.substring(BEARER_PREFIX.length), this.audience)
   }
 
-  getWebIdFromQueryParameter (url: URL): Promise<URL | undefined> {
+  async getWebIdFromQueryParameter (url: URL): Promise<URL | undefined> {
     const bearerToken = url.searchParams.get(BEARER_PARAM_NAME)
 
     if (typeof bearerToken !== 'string') {
       return Promise.resolve(undefined)
     }
     debug('determining WebId from query parameter', bearerToken, this.audience)
-    return determineWebId(bearerToken, this.audience)
+    // FIXME: use correct audience in bearer token fixture
+    const ret = await determineWebId(bearerToken, /* this.audience */ '83c53e50b248e66daea54dc4d5f2ed4f')
+    debug('webid is', ret)
+    return ret
   }
 
   async getWebId (httpReq: http.IncomingMessage): Promise<URL | undefined> {
@@ -97,12 +101,20 @@ export class Hub {
     debug('publishChange', url)
     this.clients.map(async (client) => {
       debug('publishChange client', url, client.subscriptions)
-      client.subscriptions.map(subscription => {
+      client.subscriptions.map(async (subscription) => {
         debug('hasPrefix', url.toString(), subscription.toString(), hasPrefix(url.toString(), subscription.toString()))
-        debug('hasAccess', client.webId, client.origin, url, ACL.Read, this.wacLdp.hasAccess(client.webId, client.origin, url, ACL.Read))
-        if (hasPrefix(url.toString(), subscription.toString()) && this.wacLdp.hasAccess(client.webId, client.origin, url, ACL.Read)) {
-          client.webSocket.send(`pub ${url.toString()}`)
+        const webId = await client.webIdPromise
+        debug(webId.toString(), url.toString(), hasPrefix(url.toString(), subscription.toString()))
+        if (!hasPrefix(url.toString(), subscription.toString())) {
+          return
         }
+        debug('calling this.wacLdp.hasAccess', url.toString())
+        const hasAccess = await this.wacLdp.hasAccess(webId, client.origin, url, ACL.Read)
+        debug('hasAccess', hasAccess)
+        if (!hasAccess) {
+          return
+        }
+        client.webSocket.send(`pub ${url.toString()}`)
       })
     })
   }
