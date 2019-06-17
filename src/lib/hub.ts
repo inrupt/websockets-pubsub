@@ -68,7 +68,7 @@ export class Hub {
     if (header.length < BEARER_PREFIX.length) {
       return Promise.resolve(undefined)
     }
-    return determineWebId(header.substring(BEARER_PREFIX.length), this.audience)
+    return determineWebId(header.substring(BEARER_PREFIX.length), 'https://pheyvaer.github.io')
   }
 
   async getWebIdFromQueryParameter (url: URL): Promise<URL | undefined> {
@@ -77,9 +77,9 @@ export class Hub {
     if (typeof bearerToken !== 'string') {
       return Promise.resolve(undefined)
     }
-    debug('determining WebId from query parameter', bearerToken, this.audience)
+    debug('determining WebId from query parameter', bearerToken, 'https://pheyvaer.github.io')
     // FIXME: use correct audience in bearer token fixture
-    const ret = await determineWebId(bearerToken, /* this.audience */ '83c53e50b248e66daea54dc4d5f2ed4f')
+    const ret = await determineWebId(bearerToken, 'https://pheyvaer.github.io')
     debug('webid is', ret)
     return ret
   }
@@ -93,7 +93,8 @@ export class Hub {
     }
     if (httpReq.url) {
       debug('looking at url', httpReq.url, this.audience, new URL(httpReq.url, this.audience))
-      return this.getWebIdFromQueryParameter(new URL(httpReq.url, this.audience))
+      console.log(httpReq.headers)
+      return this.getWebIdFromQueryParameter(new URL(httpReq.url, 'https://pheyvaer.github.io'))
     }
   }
 
