@@ -1,6 +1,6 @@
 {
   "name": "websockets-pubsub",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "WebSocket pubsub for Solid pod servers, see https://github.com/solid/solid-spec/blob/master/api-websockets.md",
   "main": "dist/lib/hub.js",
   "dependencies": {
@@ -8,14 +8,16 @@
     "@types/node": "^11.12.1",
     "@types/ws": "^6.0.1",
     "debug": "^4.1.1",
-    "wac-ldp": "^0.2.1",
+    "wac-ldp": "^0.4.0",
     "ws": "^6.2.1"
   },
   "devDependencies": {
     "@types/jest": "^24.0.11",
+    "@types/mockdate": "^2.0.0",
     "@types/node-fetch": "^2.3.3",
     "coveralls": "^3.0.3",
     "jest": "^24.7.1",
+    "mockdate": "^2.0.2",
     "node-fetch": "^2.5.0",
     "ts-jest": "^24.0.2",
     "ts-node-dev": "^1.0.0-pre.32",

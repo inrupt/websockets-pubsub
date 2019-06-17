@@ -1,17 +1,17 @@
 import * as http from 'http'
 import Debug from 'debug'
-import { checkAccess, AccessCheckTask, Path, TaskType, BlobTree, determineWebId } from 'wac-ldp'
+import { WacLdp, determineWebId, ACL, BEARER_PARAM_NAME } from 'wac-ldp'
 
-const debug = Debug('server')
+const debug = Debug('hub')
 
 const BEARER_PREFIX = 'Bearer '
 const SUBSCRIBE_COMMAND_PREFIX = 'sub '
 
 interface Client {
-  webSocket: any,
-  webId: string,
-  origin: string,
-  subscriptions: Array<string>
+  webSocket: any
+  webIdPromise: Promise<URL>
+  origin: string
+  subscriptions: Array<URL>
 }
 
 function getOrigin (headers: http.IncomingHttpHeaders): string | undefined {
@@ -20,23 +20,6 @@ function getOrigin (headers: http.IncomingHttpHeaders): string | undefined {
   }
   return headers.origin
 }
-
-function getWebId (headers: http.IncomingHttpHeaders, aud: string): Promise<string | undefined> {
-  let header
-  if (Array.isArray(headers.authorization)) {
-    header = headers.authorization[0]
-  } else {
-    header = headers.authorization
-  }
-  if (typeof header !== 'string') {
-    return Promise.resolve(undefined)
-  }
-  if (header.length < BEARER_PREFIX.length) {
-    return Promise.resolve(undefined)
-  }
-  return determineWebId(header.substring(BEARER_PREFIX.length), aud)
-}
-
 function hasPrefix (longString: string, shortString: string) {
   const length = shortString.length
   if (longString.length < length) {
@@ -45,47 +28,100 @@ function hasPrefix (longString: string, shortString: string) {
   return (longString.substring(0, length) === shortString)
 }
 
-function hasAccess (webId: string, origin: string, path: Path, storage: BlobTree) {
-  return checkAccess({
-    path,
-    isContainer: false,
-    webId,
-    origin,
-    wacLdpTaskType: TaskType.blobRead,
-    storage
-  } as AccessCheckTask)
-}
-
 export class Hub {
   clients: Array<Client>
-  aud: string
-  constructor (aud: string) {
-    this.aud = aud
+  wacLdp: WacLdp
+  audience: string
+  constructor (wacLdp: WacLdp, audience: string) {
     this.clients = []
+    this.wacLdp = wacLdp
+    this.audience = audience
   }
   async handleConnection (ws: any, upgradeRequest: http.IncomingMessage): Promise<void> {
     const newClient = {
       webSocket: ws,
-      webId: await getWebId(upgradeRequest.headers, this.aud),
+      webIdPromise: this.getWebId(upgradeRequest),
       origin: getOrigin(upgradeRequest.headers),
       subscriptions: []
     } as Client
     ws.on('message', function incoming (message: string): void {
       debug('received: %s', message)
       if (message.substring(0, SUBSCRIBE_COMMAND_PREFIX.length) === SUBSCRIBE_COMMAND_PREFIX) {
-        newClient.subscriptions.push(message.substring(SUBSCRIBE_COMMAND_PREFIX.length))
+        newClient.subscriptions.push(new URL(message.substring(SUBSCRIBE_COMMAND_PREFIX.length)))
         debug(`Client now subscribed to:`, newClient.subscriptions)
       }
     })
     this.clients.push(newClient)
+    debug('client accepted')
   }
 
-  publishChange (path: Path, storage: BlobTree) {
+  getWebIdFromAuthorizationHeader (headers: http.IncomingHttpHeaders, origin: string): Promise<URL | undefined> {
+    let header
+    if (Array.isArray(headers.authorization)) {
+      header = headers.authorization[0]
+    } else {
+      header = headers.authorization
+    }
+    if (typeof header !== 'string') {
+      return Promise.resolve(undefined)
+    }
+    if (header.length < BEARER_PREFIX.length) {
+      return Promise.resolve(undefined)
+    }
+    return determineWebId(header.substring(BEARER_PREFIX.length), origin)
+  }
+
+  async getWebIdFromQueryParameter (url: URL, origin: string): Promise<URL | undefined> {
+    const bearerToken = url.searchParams.get(BEARER_PARAM_NAME)
+
+    if (typeof bearerToken !== 'string') {
+      return Promise.resolve(undefined)
+    }
+    debug('determining WebId from query parameter', bearerToken, origin)
+    const ret = await determineWebId(bearerToken, origin)
+    debug('webid is', ret)
+    return ret
+  }
+
+  async getWebId (httpReq: http.IncomingMessage): Promise<URL | undefined> {
+    let origin: string | undefined
+    if (Array.isArray(httpReq.headers.origin)) {
+      origin = httpReq.headers.origin[0]
+    } else {
+      origin = httpReq.headers.origin
+    }
+
+    debug('getting WebId from upgrade request')
+    const fromAuthorizationHeader = await this.getWebIdFromAuthorizationHeader(httpReq.headers, origin || '')
+    if (fromAuthorizationHeader) {
+      debug('from authorization header')
+      return fromAuthorizationHeader
+    }
+    if (httpReq.url) {
+      debug('looking at url', httpReq.url, this.audience, new URL(httpReq.url, this.audience))
+      console.log(httpReq.headers)
+      return this.getWebIdFromQueryParameter(new URL(httpReq.url, this.audience), origin || '')
+    }
+  }
+
+  publishChange (url: URL) {
+    debug('publishChange', url)
     this.clients.map(async (client) => {
-      client.subscriptions.map(subscription => {
-        if (hasPrefix(path.toString(), subscription) && hasAccess(client.webId, client.origin, path, storage)) {
-          client.webSocket.send(`pub ${path.toString()}`)
+      debug('publishChange client', url, client.subscriptions)
+      client.subscriptions.map(async (subscription) => {
+        debug('hasPrefix', url.toString(), subscription.toString(), hasPrefix(url.toString(), subscription.toString()))
+        const webId = await client.webIdPromise
+        debug(webId.toString(), url.toString(), hasPrefix(url.toString(), subscription.toString()))
+        if (!hasPrefix(url.toString(), subscription.toString())) {
+          return
         }
+        debug('calling this.wacLdp.hasAccess', url.toString())
+        const hasAccess = await this.wacLdp.hasAccess(webId, client.origin, url, ACL.Read)
+        debug('hasAccess', hasAccess)
+        if (!hasAccess) {
+          return
+        }
+        client.webSocket.send(`pub ${url.toString()}`)
       })
     })
   }
