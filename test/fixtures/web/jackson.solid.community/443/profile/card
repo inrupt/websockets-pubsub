@@ -1,5 +1,5 @@
 
-@prefix : <https://michielbdejong.com/profile/card#>.
+@prefix : <https://jackson.solid.community/profile/card#>.
 @prefix acl: <http://www.w3.org/ns/auth/acl#>.
 
 :me

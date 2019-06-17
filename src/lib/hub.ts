@@ -55,7 +55,7 @@ export class Hub {
     debug('client accepted')
   }
 
-  getWebIdFromAuthorizationHeader (headers: http.IncomingHttpHeaders): Promise<URL | undefined> {
+  getWebIdFromAuthorizationHeader (headers: http.IncomingHttpHeaders, origin: string): Promise<URL | undefined> {
     let header
     if (Array.isArray(headers.authorization)) {
       header = headers.authorization[0]
@@ -68,25 +68,31 @@ export class Hub {
     if (header.length < BEARER_PREFIX.length) {
       return Promise.resolve(undefined)
     }
-    return determineWebId(header.substring(BEARER_PREFIX.length), 'https://pheyvaer.github.io')
+    return determineWebId(header.substring(BEARER_PREFIX.length), origin)
   }
 
-  async getWebIdFromQueryParameter (url: URL): Promise<URL | undefined> {
+  async getWebIdFromQueryParameter (url: URL, origin: string): Promise<URL | undefined> {
     const bearerToken = url.searchParams.get(BEARER_PARAM_NAME)
 
     if (typeof bearerToken !== 'string') {
       return Promise.resolve(undefined)
     }
-    debug('determining WebId from query parameter', bearerToken, 'https://pheyvaer.github.io')
-    // FIXME: use correct audience in bearer token fixture
-    const ret = await determineWebId(bearerToken, 'https://pheyvaer.github.io')
+    debug('determining WebId from query parameter', bearerToken, origin)
+    const ret = await determineWebId(bearerToken, origin)
     debug('webid is', ret)
     return ret
   }
 
   async getWebId (httpReq: http.IncomingMessage): Promise<URL | undefined> {
+    let origin: string | undefined
+    if (Array.isArray(httpReq.headers.origin)) {
+      origin = httpReq.headers.origin[0]
+    } else {
+      origin = httpReq.headers.origin
+    }
+
     debug('getting WebId from upgrade request')
-    const fromAuthorizationHeader = await this.getWebIdFromAuthorizationHeader(httpReq.headers)
+    const fromAuthorizationHeader = await this.getWebIdFromAuthorizationHeader(httpReq.headers, origin || '')
     if (fromAuthorizationHeader) {
       debug('from authorization header')
       return fromAuthorizationHeader
@@ -94,7 +100,7 @@ export class Hub {
     if (httpReq.url) {
       debug('looking at url', httpReq.url, this.audience, new URL(httpReq.url, this.audience))
       console.log(httpReq.headers)
-      return this.getWebIdFromQueryParameter(new URL(httpReq.url, 'https://pheyvaer.github.io'))
+      return this.getWebIdFromQueryParameter(new URL(httpReq.url, this.audience), origin || '')
     }
   }
 

@@ -23,7 +23,7 @@ beforeEach(async () => {
   if (!updatesVia) {
     throw new Error('No Updates-Via header found on HEAD')
   }
-  wsClient = new WebSocket(updatesVia)
+  wsClient = new WebSocket(updatesVia, undefined, { origin: 'https://pheyvaer.github.io' })
   received = new Promise((resolve) => {
     wsClient.on('message', function incoming (data) {
       console.log('subscribed')
