@@ -36,7 +36,7 @@
     "docs": "typedoc --out docs --mode modules src",
     "coverage": "jest --coverage",
     "coveralls": "npm run coverage && cat ./coverage/lcov.info | coveralls",
-    "postinstall": "npm install && npm run build"
+    "postinstall": "npm run build"
   },
   "repository": {
     "type": "git",
