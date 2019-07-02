@@ -1,6 +1,6 @@
 import * as http from 'http'
 import Debug from 'debug'
-import { WacLdp, determineWebId, ACL, BEARER_PARAM_NAME } from 'wac-ldp'
+import { WacLdp, determineWebIdAndOrigin, ACL, BEARER_PARAM_NAME } from 'wac-ldp'
 
 const debug = Debug('hub')
 
@@ -55,7 +55,7 @@ export class Hub {
     debug('client accepted')
   }
 
-  getWebIdFromAuthorizationHeader (headers: http.IncomingHttpHeaders, origin: string): Promise<URL | undefined> {
+  async getWebIdFromAuthorizationHeader (headers: http.IncomingHttpHeaders, origin: string): Promise<URL | undefined> {
     let header
     if (Array.isArray(headers.authorization)) {
       header = headers.authorization[0]
@@ -68,7 +68,8 @@ export class Hub {
     if (header.length < BEARER_PREFIX.length) {
       return Promise.resolve(undefined)
     }
-    return determineWebId(header.substring(BEARER_PREFIX.length), origin)
+    const { webId } = await determineWebIdAndOrigin(header.substring(BEARER_PREFIX.length), origin)
+    return webId
   }
 
   async getWebIdFromQueryParameter (url: URL, origin: string): Promise<URL | undefined> {
@@ -78,9 +79,9 @@ export class Hub {
       return Promise.resolve(undefined)
     }
     debug('determining WebId from query parameter', bearerToken, origin)
-    const ret = await determineWebId(bearerToken, origin)
-    debug('webid is', ret)
-    return ret
+    const { webId } = await determineWebIdAndOrigin(bearerToken, origin)
+    debug('webid is', webId)
+    return webId
   }
 
   async getWebId (httpReq: http.IncomingMessage): Promise<URL | undefined> {
