@@ -100,7 +100,6 @@ export class Hub {
     }
     if (httpReq.url) {
       debug('looking at url', httpReq.url, this.audience, new URL(httpReq.url, this.audience))
-      console.log(httpReq.headers)
       return this.getWebIdFromQueryParameter(new URL(httpReq.url, this.audience), origin || '')
     }
   }

@@ -41,7 +41,7 @@ afterEach(() => {
   stopServer()
 })
 
-test.only('publishes a change event', async () => {
+test('publishes a change event', async () => {
   await fetch('http://localhost:8081/asdf/test.txt', {
     method: 'PUT',
     body:  'hello',
