@@ -18,7 +18,7 @@ export class Server {
     this.port = port
     this.storage = new BlobTreeInMem() // singleton in-memory storage
     const skipWac = (owner === undefined)
-    this.wacLdp = new WacLdp(this.storage, aud, new URL(`ws://localhost:${this.port}/`), true /* skipWac */)
+    this.wacLdp = new WacLdp(this.storage, aud, new URL(`ws://localhost:${this.port}/`), true /* skipWac */, `localhost:${this.port}`)
     this.server = http.createServer(this.wacLdp.handler.bind(this.wacLdp))
     this.wsServer = new WebSocket.Server({
       server: this.server
