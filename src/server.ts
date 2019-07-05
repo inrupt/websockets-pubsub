@@ -32,9 +32,9 @@ export class Server {
     })
   }
   async listen () {
-    if (this.owner) {
-      await this.wacLdp.setRootAcl(this.owner)
-    }
+    // if (this.owner) {
+    //   await this.wacLdp.setRootAcl(thisthis.owner)
+    // }
     this.server.listen(this.port)
     debug('listening on port', this.port)
   }
