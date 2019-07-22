@@ -18,7 +18,7 @@ export class Server {
     this.port = port
     this.storage = new BlobTreeInMem() // singleton in-memory storage
     const skipWac = (owner === undefined)
-    this.wacLdp = new WacLdp(this.storage, aud, new URL(`ws://localhost:${this.port}/`), true /* skipWac */, `localhost:${this.port}`, false)
+    this.wacLdp = new WacLdp(this.storage, aud, new URL(`ws://localhost:${this.port}/`), skipWac, `localhost:${this.port}`, false)
     this.server = http.createServer(this.wacLdp.handler.bind(this.wacLdp))
     this.wsServer = new WebSocket.Server({
       server: this.server
@@ -32,9 +32,9 @@ export class Server {
     })
   }
   async listen () {
-    // if (this.owner) {
-    //   await this.wacLdp.setRootAcl(thisthis.owner)
-    // }
+    if (this.owner) {
+      await this.wacLdp.setRootAcl(new URL(`https://localhost:${this.port}`), this.owner)
+    }
     this.server.listen(this.port)
     debug('listening on port', this.port)
   }

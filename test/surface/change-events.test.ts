@@ -46,7 +46,8 @@ test('publishes a change event', async () => {
     method: 'PUT',
     body:  'hello',
     headers: {
-      authorization: 'Bearer ' + bearerToken
+      authorization: 'Bearer ' + bearerToken,
+      'if-none-match': '*'
     }
   })
   const notif = await received
