@@ -1,13 +1,13 @@
 import * as http from 'http'
 import Debug from 'debug'
-import { BlobTreeInMem, BlobTree, WacLdp } from 'wac-ldp'
+import { BlobTreeInMem, BlobTree, WacLdp, QuadAndBlobStore } from 'wac-ldp'
 import * as WebSocket from 'ws'
 import { Hub } from './lib/hub'
 
 const debug = Debug('server')
 
 export class Server {
-  storage: BlobTree
+  storage: QuadAndBlobStore
   wacLdp: WacLdp
   server: http.Server
   hub: Hub
@@ -16,9 +16,16 @@ export class Server {
   owner: URL | undefined
   constructor (port: number, aud: string, owner: URL | undefined) {
     this.port = port
-    this.storage = new BlobTreeInMem() // singleton in-memory storage
+    this.storage = new QuadAndBlobStore(new BlobTreeInMem()) // singleton in-memory storage
     const skipWac = (owner === undefined)
-    this.wacLdp = new WacLdp(this.storage, aud, new URL(`ws://localhost:${this.port}/`), skipWac, `localhost:${this.port}`, false)
+    this.wacLdp = new WacLdp({
+      storage: this.storage,
+      aud,
+      updatesViaUrl: new URL(`ws://localhost:${this.port}/`),
+      skipWac,
+      idpHost: `localhost:${this.port}`,
+      usesHttps: false
+    })
     this.server = http.createServer(this.wacLdp.handler.bind(this.wacLdp))
     this.wsServer = new WebSocket.Server({
       server: this.server
