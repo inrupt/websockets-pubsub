@@ -1,6 +1,6 @@
 import * as http from 'http'
 import Debug from 'debug'
-import { BlobTreeInMem, BlobTree, WacLdp, QuadAndBlobStore } from 'wac-ldp'
+import { BlobTreeInMem, BlobTree, WacLdp, QuadAndBlobStore, NssCompatResourceStore, DefaultOperationFactory, AclBasedAuthorizer } from 'wac-ldp'
 import * as WebSocket from 'ws'
 import { Hub } from './lib/hub'
 
@@ -18,7 +18,10 @@ export class Server {
     this.port = port
     this.storage = new QuadAndBlobStore(new BlobTreeInMem()) // singleton in-memory storage
     const skipWac = (owner === undefined)
-    this.wacLdp = new WacLdp({
+    const resourceStore = new NssCompatResourceStore()
+    const operationFactory = new DefaultOperationFactory(resourceStore)
+    const authorizer = new AclBasedAuthorizer(resourceStore)
+    this.wacLdp = new WacLdp(operationFactory, authorizer, {
       storage: this.storage,
       aud,
       updatesViaUrl: new URL(`ws://localhost:${this.port}/`),
