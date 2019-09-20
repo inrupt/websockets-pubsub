@@ -13,6 +13,6 @@ module.exports = {
         }
     },
     transformIgnorePatterns: [
-        'node_modules/(?!(solid-server-ts)/)'
+        'node_modules/(?!(solid-server-ts|wac-ldp/node_modules/solid-server-ts)/)'
     ]
 };
