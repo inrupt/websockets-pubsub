@@ -9,7 +9,7 @@
     "@types/ws": "^6.0.1",
     "debug": "^4.1.1",
     "solid-server-ts": "^0.1.1",
-    "wac-ldp": ">=0.9.5",
+    "wac-ldp": ">=0.13.1",
     "ws": "^6.2.1"
   },
   "devDependencies": {
