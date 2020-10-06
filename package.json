@@ -5,7 +5,7 @@
   "main": "dist/lib/hub.js",
   "dependencies": {
     "@types/debug": "^4.1.4",
-    "@types/node": "^11.12.1",
+    "@types/node": "^11.15.24",
     "@types/ws": "^6.0.1",
     "debug": "^4.1.1",
     "solid-server-ts": "^0.1.1",
