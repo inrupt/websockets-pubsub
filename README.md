@@ -1,3 +1,9 @@
+-----
+
+**⚠️ This project is obsolete. Please use the [Community Solid Server](https://github.com/solid/community-server) instead. ⚠️**
+
+-----
+
 # websockets-pubsub
 
 [![Build Status](https://travis-ci.org/inrupt/websockets-pubsub.svg?branch=master)](https://travis-ci.org/inrupt/websockets-pubsub)
